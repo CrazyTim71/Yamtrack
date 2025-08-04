@@ -320,6 +320,7 @@ TRACK_TIME = config("TRACK_TIME", default=True, cast=bool)
 TZ = zoneinfo.ZoneInfo(TIME_ZONE)
 
 IMG_NONE = "https://www.themoviedb.org/assets/2/v4/glyphicons/basic/glyphicons-basic-38-picture-grey-c2ebdbb057f2a7614185931650f8cee23fa137b93812ccb132b9df511df1cfac.svg"
+IMG_NONE_THETVDB = "https://artworks.thetvdb.com/banners/images/missing/series.jpg"
 
 REQUEST_TIMEOUT = 120  # seconds
 PER_PAGE = 24
@@ -333,6 +334,16 @@ TMDB_API = config(
 )
 TMDB_NSFW = config("TMDB_NSFW", default=False, cast=bool)
 TMDB_LANG = config("TMDB_LANG", default="en")
+
+THETVDB_API = config(
+    "THETVDB_API",
+    default=secret(
+        "THETVDB_API_FILE",
+        "UNSET",
+    ),
+)
+
+THETVDB_LANG = config("THETVDB_LANG", default="en")
 
 MAL_API = config(
     "MAL_API",

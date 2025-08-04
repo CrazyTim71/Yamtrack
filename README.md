@@ -149,3 +149,30 @@ Pull requests are welcome! Whether it's fixing typos, improving documentation, o
 If you'd like to support the project financially:
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/fuzzygrim)
+
+### Attribution
+<style>
+    .thetvdbattribution {
+        display: flex;
+        margin: 5px 0;
+        padding: 15px;
+        background-color: #365658;
+        border: 1px solid #0d1313;
+        min-height: 80px;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+    }
+    .thetvdbattribution:hover {
+        background-color: #406264;
+    }
+    .thetvdbattribution img {
+        margin: 0 10px 0;
+    }
+</style>
+<div style="max-width: 500px">
+    <a class="thetvdbattribution" style="" href="https://thetvdb.com/subscribe">
+        <img src="https://www.thetvdb.com/images/attribution/logo1.png" height="45">
+        Metadata provided by TheTVDB. Please consider adding missing information or subscribing.
+    </a>
+</div>
