@@ -5,9 +5,12 @@ from django.conf import settings
 from django.core.cache import cache
 
 import json
+import jwt
 from app import helpers
 from app.models import MediaTypes, Sources
 from app.providers import services
+from langcodes import Language
+from time import time
 
 logger = logging.getLogger(__name__)
 base_url = "https://api4.thetvdb.com/v4"
@@ -16,26 +19,56 @@ base_params = {
     "language": settings.THETVDB_LANG,
 }
 
+def _is_token_expired(token):
+    """Check if the JWT token is expired."""
+    if not token:
+        return True
+    
+    try:
+        # Decode the JWT token without verification to check expiration
+        decoded = jwt.decode(token, options={"verify_signature": False})
+        exp = decoded.get('exp')
+        
+        if exp is None:
+            return True
+            
+        # Check if token is expired (with a 5-minute buffer)
+        current_time = time()
+        return current_time >= (exp - 300)  # 300 seconds = 5 minutes buffer
+        
+    except jwt.DecodeError:
+        logger.error("Failed to decode JWT token")
+        return True
+    except Exception as e:
+        logger.error(f"Error checking token expiration: {e}")
+        return True
+
 def _get_token():
     """Get the API token for TheTVDB."""
-    data = json.dumps({
-        "apikey": settings.THE_TVDB_API,
-    }, indent=2).encode("utf-8")
+    cache_key = "thetvdb_token"
+    token = cache.get(cache_key)
+    if token is None or _is_token_expired(token):
+        data = json.dumps({
+            "apikey": settings.THETVDB_API,
+        }, indent=2).encode("utf-8")
 
-    try:
-        response = requests.get(
-            f"{base_url}/login", 
-            data=data, 
-            headers={
-                "Content-Type": "application/json",
-            }
-        )
+        try:
+            response = requests.post(
+                f"{base_url}/login", 
+                data=data, 
+                headers={
+                    "Content-Type": "application/json",
+                }
+            )
 
-        data_response = json.loads(response.text)
-    except requests.exceptions.HTTPError as error:
-        handle_error(error)
+            data_response = json.loads(response.text)
+        except requests.exceptions.HTTPError as error:
+            handle_error(error)
 
-    return data_response["data"]["token"]
+        token = data_response["data"]["token"]
+        cache.set("thetvdb_token", token, 60 * 60 * 24 * 30)  # Cache for 30 days
+
+    return token
 
 def handle_error(error):
     """Handle TheTVDB API errors."""
@@ -77,25 +110,45 @@ def search(media_type, query, page):
         }
 
         try:
+            # Get the API token
+            token = _get_token()
+            
             response = services.api_request(
                 Sources.THETVDB.value,
                 "GET",
                 url,
                 params=params,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                }
             )
         except requests.exceptions.HTTPError as error:
             handle_error(error)
 
+        # TODO: fix emtpy search results
         results = [
             {
                 "media_id": media["id"],
                 "source": Sources.THETVDB.value,
                 "media_type": media_type,
-                "title": get_title(media),
+                "title": get_title(media, settings.THETVDB_LANG),
                 "image": get_image_url(media["image_url"]),
             }
             for media in response["data"]
         ]
+
+        total_results = response["links"]["total_items"]
+        per_page = 50
+        data = helpers.format_search_response(
+            page,
+            per_page,
+            total_results,
+            results,
+        )
+
+        cache.set(cache_key, data)
+
+    return data
 
 
 def get_image_url(path):
@@ -106,9 +159,12 @@ def get_image_url(path):
         return path
     return settings.IMG_NONE_THETVDB
 
-def get_title(response):
+def get_title(response, language=None):
     """Return the title for the media."""
-    try:
-        return response["name_translated"]
-    except KeyError:
-        return response["name"]
+    # convert language to alpha-3 code
+    # for example, 'en' becomes 'eng'
+    if language is not None:
+        lang = Language.get(language).to_alpha3()
+        return response["translations"].get(lang, response["name"])
+    
+    return response["name"]

@@ -24,3 +24,5 @@ redis[hiredis]==6.2.0
 requests==2.32.4
 requests-ratelimiter==0.7.0
 unidecode==1.4.0
+langcodes
+jwt
