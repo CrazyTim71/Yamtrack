@@ -11,12 +11,19 @@ from app.models import MediaTypes, Sources
 from app.providers import services
 from langcodes import Language
 from time import time
+from urllib.parse import quote_plus
 
 logger = logging.getLogger(__name__)
 base_url = "https://api4.thetvdb.com/v4"
 
 base_params = {
     "language": settings.THETVDB_LANG,
+}
+
+TYPES = {
+    MediaTypes.MOVIE.value: "movie",
+    MediaTypes.TV.value: "series",
+    MediaTypes.ANIME.value: "series",
 }
 
 def _is_token_expired(token):
@@ -96,6 +103,12 @@ def handle_error(error):
 
 def search(media_type, query, page):
     """Search for media on TheTVDB."""
+
+    if page >= 1:
+        corrected_page = page - 1 # TheTVDB starts pages at 0
+    else:
+        corrected_page = page
+    
     cache_key = f"search_{Sources.THETVDB.value}_{media_type}_{query}_{page}"
     data = cache.get(cache_key)
 
@@ -103,10 +116,10 @@ def search(media_type, query, page):
         url = f"{base_url}/search"
 
         params = {
+            "query": quote_plus(query),
+            "page": corrected_page,
+            "type": TYPES[media_type],
             **base_params,
-            "query": query,
-            "page": page,
-            "type": media_type,
         }
 
         try:
@@ -125,7 +138,6 @@ def search(media_type, query, page):
         except requests.exceptions.HTTPError as error:
             handle_error(error)
 
-        # TODO: fix emtpy search results
         results = [
             {
                 "media_id": media["id"],
@@ -138,7 +150,7 @@ def search(media_type, query, page):
         ]
 
         total_results = response["links"]["total_items"]
-        per_page = 50
+        per_page = response["links"]["page_size"]
         data = helpers.format_search_response(
             page,
             per_page,
