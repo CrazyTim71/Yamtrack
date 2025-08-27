@@ -412,7 +412,7 @@ TRAKT_API_SECRET = config(
     "TRAKT_API_SECRET",
     default=secret(
         "TRAKT_API_SECRET_FILE",
-        "UNSET",
+        "",
     ),
 )
 

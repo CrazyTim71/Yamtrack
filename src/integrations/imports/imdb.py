@@ -232,7 +232,7 @@ class IMDBImporter:
 
         media_type = IMDB_TYPE_MAPPING.get(title_type, "")
 
-        if media_type == MediaTypes.MOVIE.value and "movie_results" in response:
+        if media_type == MediaTypes.MOVIE.value and response.get("movie_results"):
             movie = response["movie_results"][0]
             return {
                 "media_id": movie["id"],
@@ -241,7 +241,7 @@ class IMDBImporter:
                 "media_type": MediaTypes.MOVIE.value,
             }
 
-        if media_type == MediaTypes.TV.value and "tv_results" in response:
+        if media_type == MediaTypes.TV.value and response.get("tv_results"):
             tv_show = response["tv_results"][0]
             return {
                 "media_id": tv_show["id"],
@@ -297,10 +297,7 @@ class IMDBImporter:
             params["end_date"] = most_recent_date
 
         instance = model(**params)
-
-        # Set history date for proper tracking
-        if date_rated:
-            instance._history_date = most_recent_date or timezone.now()
+        instance._history_date = most_recent_date or timezone.now()
 
         return instance
 
